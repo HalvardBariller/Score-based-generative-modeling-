@@ -61,27 +61,38 @@ class ScoreMatching():
         jacobian_matrix = self.get_jacobian(score_network, data)
         jacobian_trace = torch.diagonal(jacobian_matrix, dim1=-1, dim2=-2).sum(dim=-1)
         # Compute the norm of the score estimation
-        jacobian_norm = 0.5 * torch.norm(score, dim=-1)**2
+        score_network_norm = 0.5 * torch.norm(score, dim=-1)**2
         # Compute the loss as empirical mean
-        loss = torch.mean(jacobian_trace + jacobian_norm, dim = -1)
+        loss = torch.mean(jacobian_trace + score_network_norm, dim = -1)
         return loss
 
     def denoising_score_matching(self, data, model):
-         data=torch.Tensor(data).float()
-         # pertubation of the data
-         perturbed_samples = data + torch.randn_like(data) * self.sigma
-         target = - 1 / (self.sigma ** 2) * (perturbed_samples - data)
-         scores = model(perturbed_samples)
-
-         target = target.view(target.shape[0], -1)
-         scores = scores.view(scores.shape[0], -1)
-         #loss according to paper
-         loss = 1 / 2. * ((scores - target) ** 2).sum(dim=-1).mean(dim=0)
-         return loss
-
-    def sliced_score_matching(self, data, model):
-        # Implement your sliced score matching loss calculation here
+        # Implement your denoising score matching loss calculation here
         pass
+
+    def sliced_score_matching(self, data, score_network):
+        """
+        Computes the sliced score matching loss for a given data batch of size B.
+        ----------
+        Parameters:
+        data: a batch of data points (B, N)
+        score_network: a score network (R^N -> R^N)
+        Returns:
+        loss: the sliced score matching loss (scalar)
+        """
+        # Turn numpy array into tensor
+        data = torch.tensor(data, requires_grad=True).float().to(self.device)
+        # Generate random vectors
+        random_vectors = torch.randn_like(data)
+        random_vectors /= torch.norm(random_vectors, dim=-1, keepdim=True)
+        # Compute random projections
+        score, projections = autograd.functional.jvp(score_network, data, random_vectors, create_graph=True)
+        projections = projections * random_vectors
+        # Compute the norm of the score estimation
+        score_network_norm = 0.5 * torch.norm(score, dim=-1)**2
+        # Compute the loss as empirical mean
+        loss = torch.mean(torch.sum(projections, dim=-1) + score_network_norm, dim = -1)
+        return loss
 
     def compute_loss(self, data, model):
         """
