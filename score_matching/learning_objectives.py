@@ -6,7 +6,7 @@ import tqdm
 
 
 class ScoreMatching():
-    def __init__(self, optimizer, loss_type, device):
+    def __init__(self, optimizer, loss_type, device,sigma=0.01):
         self.optimizer = optimizer
         self.device = device
         self.loss_type = loss_type
@@ -15,6 +15,7 @@ class ScoreMatching():
             'denoising_score_matching': self.denoising_score_matching,
             'sliced_score_matching': self.sliced_score_matching
         }
+        self.sigma=sigma # sigma to pertubate data in denoising score matching
         if loss_type not in self.loss_functions:
             raise ValueError(f"Invalid loss type '{loss_type}'. Supported types are: {', '.join(self.loss_functions.keys())}")
         
@@ -66,8 +67,17 @@ class ScoreMatching():
         return loss
 
     def denoising_score_matching(self, data, model):
-        # Implement your denoising score matching loss calculation here
-        pass
+         data=torch.Tensor(data).float()
+         # pertubation of the data
+         perturbed_samples = data + torch.randn_like(data) * self.sigma
+         target = - 1 / (self.sigma ** 2) * (perturbed_samples - data)
+         scores = model(perturbed_samples)
+
+         target = target.view(target.shape[0], -1)
+         scores = scores.view(scores.shape[0], -1)
+         #loss according to paper
+         loss = 1 / 2. * ((scores - target) ** 2).sum(dim=-1).mean(dim=0)
+         return loss
 
     def sliced_score_matching(self, data, model):
         # Implement your sliced score matching loss calculation here
