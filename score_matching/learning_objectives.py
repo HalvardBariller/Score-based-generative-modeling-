@@ -67,8 +67,14 @@ class ScoreMatching():
         return loss
 
     def denoising_score_matching(self, data, model):
-        # Implement your denoising score matching loss calculation here
-        pass
+        data=torch.Tensor(data).float()
+        perturbed_samples = data + torch.randn_like(data) * self.sigma
+        target = - 1 / (data** 2) * (perturbed_samples - data)
+        scores = model(perturbed_samples)
+        target = target.view(target.shape[0], -1)
+        scores = scores.view(scores.shape[0], -1)
+        loss = 1 / 2. * ((scores - target) ** 2).sum(dim=-1).mean(dim=0)
+        return loss
 
     def sliced_score_matching(self, data, score_network):
         """
