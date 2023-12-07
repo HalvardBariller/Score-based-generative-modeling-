@@ -67,12 +67,23 @@ class ScoreMatching():
         return loss
 
     def denoising_score_matching(self, data, model):
+        """
+         Computes the sliced score matching loss for a given data
+          taking data and model as entries
+          return denoising score matching loss
+        """
         data=torch.Tensor(data).float()
+
+        # data pertubation 
         perturbed_samples = data + torch.randn_like(data) * self.sigma
+        # computation of the target and scores
         target = - 1 / (data** 2) * (perturbed_samples - data)
         scores = model(perturbed_samples)
+        # reshape Tensor
         target = target.view(target.shape[0], -1)
         scores = scores.view(scores.shape[0], -1)
+
+        # loss according to the formula
         loss = 1 / 2. * ((scores - target) ** 2).sum(dim=-1).mean(dim=0)
         return loss
 
