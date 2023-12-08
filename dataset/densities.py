@@ -26,7 +26,7 @@ def multivariate_gaussian_density(x, mu, sigma):
 
 def gmm_density(x, mu, sigmas, alphas):
     """
-    Computes the density of a Gaussian mixture model.
+    Computes the unnormalized density of a Gaussian mixture model.
     ----------
     Parameters:
     x: Points to evaluate the density at. 
@@ -39,10 +39,22 @@ def gmm_density(x, mu, sigmas, alphas):
         density += alphas[i] * multivariate_gaussian_density(x, mu[i], sigmas[i])
     return density
 
-
-def log_density_banana(x, mu, sigma, b=0.5):
+def gmm_log_density(x, mu, sigmas, alphas):
     """
-    Computes the log density of the banana-shaped distribution.
+    Computes the unnormalized log density of a Gaussian mixture model.
+    ----------
+    Parameters:
+    x: Points to evaluate the density at. 
+    mu: Means of the Gaussian components.
+    var: Covariances of the Gaussian components.
+    alphas: Mixing proportions of the Gaussian components.
+    """
+    return np.log(gmm_density(x, mu, sigmas, alphas))
+
+
+def banana_density(x, mu, sigma, b=0.5):
+    """
+    Computes the unnormalized log density of the banana-shaped distribution.
     Parameters
     ----------
     x : The point at which to evaluate the density function.
@@ -50,6 +62,29 @@ def log_density_banana(x, mu, sigma, b=0.5):
     sigma : The covariance matrix of the distribution.
     b : The parameter of the distribution.
     """
+    if x.ndim == 1:
+        x_transformed = np.copy(x)
+        x_transformed[1] = x[1] + b * (x[0]**2 - sigma[0,0])
+        return multivariate_gaussian_density(x_transformed, mu, sigma)
     x_transformed = np.copy(x)
-    x_transformed[:,1] = x[:,1] - b * (x[:,0]**2 - sigma[0,0])
+    x_transformed[:,1] = x[:,1] + b * (x[:,0]**2 - sigma[0,0])
+    return multivariate_gaussian_density(x_transformed, mu, sigma)
+
+
+def log_density_banana(x, mu, sigma, b=0.5):
+    """
+    Computes the unnormalized log density of the banana-shaped distribution.
+    Parameters
+    ----------
+    x : The point at which to evaluate the density function.
+    mu : The mean of the distribution.
+    sigma : The covariance matrix of the distribution.
+    b : The parameter of the distribution.
+    """
+    if x.ndim == 1:
+        x_transformed = np.copy(x)
+        x_transformed[1] = x[1] + b * (x[0]**2 - sigma[0,0])
+        return np.log(multivariate_gaussian_density(x_transformed, mu, sigma))
+    x_transformed = np.copy(x)
+    x_transformed[:,1] = x[:,1] + b * (x[:,0]**2 - sigma[0,0])
     return np.log(multivariate_gaussian_density(x_transformed, mu, sigma))

@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 from . import densities
 
@@ -31,6 +32,8 @@ def gaussian_mixture_score(x, mu, sigmas, alphas):
         return scores
     
 
+    
+
 def score_banana(x, mu, sigma, b=0.5):
     """
     Computes the score of the banana-shaped distribution.
@@ -41,7 +44,12 @@ def score_banana(x, mu, sigma, b=0.5):
     sigma : The covariance matrix of the distribution.
     b : The parameter of the distribution.
     """
-    x_transformed = np.copy(x)
+    # x_transformed = np.copy(x)
+    if x.ndim ==1:
+        score = np.zeros(x.shape)
+        score[0] = - (x[0] - mu[0]) / sigma[0,0] - 2 * b * x[0] * (x[1] + b * (x[0]**2 - sigma[0,0]) - mu[1]) / sigma[1,1]
+        score[1] = - (x[1] + b * (x[0]**2 - sigma[0,0]) - mu[1]) / sigma[1,1]
+        return score
     score = np.zeros(x.shape)
     for i in range(len(x)):
         score[i,0] = - (x[i,0] - mu[0]) / sigma[0,0] - 2 * b * x[i,0] * (x[i,1] + b * (x[i,0]**2 - sigma[0,0]) - mu[1]) / sigma[1,1]
