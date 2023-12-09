@@ -57,7 +57,7 @@ def plot_GMM(samples, clusters, mu, sigma, contours=True):
 
 def gmm_density_heatmap(density, *args):
     """
-    Plots a heatmap of the density function.
+    Plots a heatmap of the unnormalized density function.
     ----------
     Parameters
     density : The density function.
@@ -74,7 +74,7 @@ def gmm_density_heatmap(density, *args):
     plt.colorbar()
     plt.xlabel('x')
     plt.ylabel('y')
-    plt.title('Gaussian mixture density')
+    plt.title('Unnormalized Gaussian mixture density')
     plt.show()
 
 
@@ -122,6 +122,30 @@ def plot_banana(banana_shaped_data):
     plt.xlabel('x')
     plt.ylabel('y')
     plt.title('Banana-shaped distribution')
+    plt.show()
+
+
+def banana_density_heatmap(density, *args):
+    """
+    Plots a heatmap of the unnormalized density function.
+    ----------
+    Parameters
+    density : The density function.
+    *args : The parameters of the density function.
+    """
+    fig, ax = plt.subplots(1, 1, figsize=(12, 6))
+    mu, sigma, b = args
+    x_grid, y_grid = np.meshgrid(np.linspace(mu-4, mu+4, 100), np.linspace(mu-4, mu+4, 100))
+    z_grid = np.empty(x_grid.shape)
+    for i in range(x_grid.shape[0]):
+        for j in range(x_grid.shape[1]):
+            x = np.array([x_grid[i, j], y_grid[i, j]])
+            z_grid[i, j] = density(x, mu, sigma, b)
+    ax.contourf(x_grid, y_grid, z_grid, levels=100)
+    fig.colorbar(ax.contourf(x_grid, y_grid, z_grid, levels=100), ax=ax)
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_title('Unnormalized banana-shaped density')
     plt.show()
 
 
