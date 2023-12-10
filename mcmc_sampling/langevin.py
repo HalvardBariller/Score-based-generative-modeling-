@@ -5,6 +5,8 @@ import tqdm
 
 from dataset import sampling, densities, scores, visualisation
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 def euler_maruyama_exact_scores(x_0, score, step_size, n_steps, *args):
     """
     Euler-Maruyama discretization of the Langevin diffusion.
@@ -23,21 +25,43 @@ def euler_maruyama_exact_scores(x_0, score, step_size, n_steps, *args):
         x_hist = np.zeros((n_steps + 1, *x_0.shape))
         x_hist[0] = x_0
         for i in range(n_steps):
-            x_hist[i+1] = x_hist[i] + step_size * score(x_hist[i], mus, sigmas, alpha) + np.sqrt(step_size) * np.random.randn(*x_0.shape)
+            diffusion_term = np.sqrt(step_size) * np.random.randn(*x_0.shape)
+            x_hist[i+1] = x_hist[i] + step_size * score(x_hist[i], mus, sigmas, alpha) + diffusion_term
         return x_hist[-1], x_hist
     elif score == scores.score_banana:
         mu_banana, sigma_banana = args
         x_hist = np.zeros((n_steps + 1, *x_0.shape))
         x_hist[0] = x_0
         for i in range(n_steps):
-            x_hist[i+1] = x_hist[i] + step_size * score(x_hist[i], mu_banana, sigma_banana) + np.sqrt(step_size) * np.random.randn(*x_0.shape)
+            diffusion_term = np.sqrt(step_size) * np.random.randn(*x_0.shape)
+            x_hist[i+1] = x_hist[i] + step_size * score(x_hist[i], mu_banana, sigma_banana) + diffusion_term
         return x_hist[-1], x_hist
     else:
         raise ValueError('Score function must be either gaussian_mixture_score or score_banana') 
+    
+
+def euler_maruyama_score_matching(x_0, model, step_size, n_steps):
+    """
+    Euler-Maruyama discretization of the Langevin diffusion.
+    ----------
+    Parameters:
+    x_0: Initial state
+    score: Score function of the target distribution
+    step_size: Step size of the discretization
+    n_steps: Number of steps of the discretization
+    Returns:
+    x_final: Final state
+    x_hist: Trajectory of the discretization if history=True
+    """
+    x_hist = np.zeros((n_steps + 1, *x_0.shape))
+    x_hist[0] = x_0
+    for i in range(n_steps):
+        score_matching = model(torch.tensor(x_hist[i]).float().to(device)).cpu().detach().numpy()
+        x_hist[i+1] = x_hist[i] + step_size * score_matching + np.sqrt(step_size) * np.random.randn(*x_0.shape)
+    return x_hist[-1], x_hist
 
 
-
-def unnadjusted_langevin_sampling(score, step_size, n_steps, n_samples, *args):
+def unnadjusted_langevin_sampling(score, step_size, n_steps, n_samples, *args, exact_score=True, **kwargs):
     """
     Unadjusted Langevin sampling.
     ----------
@@ -51,14 +75,26 @@ def unnadjusted_langevin_sampling(score, step_size, n_steps, n_samples, *args):
     """
     dim = 2
     samples = np.zeros((n_samples, dim))
-    if score == scores.gaussian_mixture_score:
-        x_0 = np.random.uniform(-5, 15, size=(n_samples, 2))
-    elif score == scores.score_banana:
-        x_0 = np.random.uniform(-5, 5, size=(n_samples, 2))
-    for i in tqdm.tqdm(range(n_samples)):
-        x, _ = euler_maruyama_exact_scores(x_0[i], score, step_size, n_steps, *args)
-        samples[i] = x
-    return samples  
+    if exact_score:
+        if score == scores.gaussian_mixture_score:
+            x_0 = np.random.uniform(-5, 15, size=(n_samples, 2))
+        elif score == scores.score_banana:
+            x_0 = np.random.uniform(-5, 5, size=(n_samples, 2))
+        for i in tqdm.tqdm(range(n_samples)):
+            x, _ = euler_maruyama_exact_scores(x_0[i], score, step_size, n_steps, *args)
+            samples[i] = x  
+    else:
+        data_type = kwargs['data_type']
+        if data_type == 'gmm':
+            x_0 = np.random.uniform(-5, 15, size=(n_samples, 2))
+        elif data_type == 'banana':
+            x_0 = np.random.uniform(-5, 5, size=(n_samples, 2))
+        for i in tqdm.tqdm(range(n_samples)):
+            x, _ = euler_maruyama_score_matching(x_0[i], score, step_size, n_steps)
+            samples[i] = x
+    return samples
+
+
 
 
 
@@ -89,7 +125,8 @@ def mh_langevin_exact_scores(x_0, score, step_size, n_steps, *args, verbose=True
             loglik_x = densities.gmm_log_density(x, mus, sigmas, alpha)
             score_x = score(x, mus, sigmas, alpha)
             # Propose a new state x_temp according to the Euler-Maruyama discretization
-            x_temp = x_hist[i] + step_size * score(x_hist[i], mus, sigmas, alpha) + np.sqrt(step_size) * np.random.randn(*x_0.shape)
+            diffusion_term = np.sqrt(step_size) * np.random.randn(*x_0.shape)
+            x_temp = x_hist[i] + step_size * score(x_hist[i], mus, sigmas, alpha) + diffusion_term
             # Compute the unnormalized log-likelihood and score at x_temp
             loglik_x_temp = densities.gmm_log_density(x_temp, mus, sigmas, alpha)
             score_x_temp = score(x_temp, mus, sigmas, alpha)
@@ -118,7 +155,8 @@ def mh_langevin_exact_scores(x_0, score, step_size, n_steps, *args, verbose=True
             loglik_x = densities.log_density_banana(x, mu_banana, sigma_banana)
             score_x = score(x, mu_banana, sigma_banana)
             # Propose a new state x_temp according to the Euler-Maruyama discretization
-            x_temp = x_hist[i] + step_size * score(x_hist[i], mu_banana, sigma_banana) + np.sqrt(step_size) * np.random.randn(*x_0.shape)
+            diffusion_term = np.sqrt(step_size) * np.random.randn(*x_0.shape)
+            x_temp = x_hist[i] + step_size * score(x_hist[i], mu_banana, sigma_banana) + diffusion_term
             # Compute the unnormalized log-likelihood and score at x_temp
             loglik_x_temp = densities.log_density_banana(x_temp, mu_banana, sigma_banana)
             score_x_temp = score(x_temp, mu_banana, sigma_banana)
@@ -161,3 +199,4 @@ def mh_langevin_sampling(score, step_size, n_steps, n_samples, *args):
         x, _ = mh_langevin_exact_scores(x_0[i], score, step_size, n_steps, *args, verbose=False)
         samples[i] = x
     return samples
+

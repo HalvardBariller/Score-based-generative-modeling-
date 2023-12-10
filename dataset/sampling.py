@@ -47,16 +47,20 @@ def gaussian_mixture_sampling(mu, sigma, alphas, n_samples = 10000):
     assert len(mu) == len(sigma), "mu and sigma must have the same length"
     gaussian_data = np.zeros((n_samples, 2))
     clusters = np.zeros(n_samples)
+    batches = [0]
+    for i in range(len(mu)-1):
+        batches.append(int(n_samples * alphas[i]))
+    batches.append(n_samples)
     for i in range(len(mu)):
-        batch = int(n_samples * alphas[i])
-        gaussian_data[i*batch:(i+1)*batch,:] = gaussian_sampling(mu[i], sigma[i], batch)
-        clusters[i*batch:(i+1)*batch] = i
+        batch = batches[i+1] - batches[i]
+        gaussian_data[batches[i]:batches[i+1],:] = gaussian_sampling(mu[i], sigma[i], batch)
+        clusters[batches[i]:batches[i+1]] = i
     return gaussian_data, clusters
 
 
 def banana_shaped_sampling(N, mu, sigma, d = 2, b=0.5):
     """
-    Returns the banana-shaped distribution.
+    Returns samples from the banana-shaped distribution.
     Parameters
     ----------
     N : The number of samples to generate.

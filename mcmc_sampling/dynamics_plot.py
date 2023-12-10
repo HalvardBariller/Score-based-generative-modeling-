@@ -65,7 +65,7 @@ def langevin_sampling_gmm(x_samples, *args):
     ax[0].set_title('Unnormalized Gaussian mixture density')
     ax[1].set_aspect('equal', adjustable='box')
     ax[1].hist2d(x_samples[:, 0], x_samples[:, 1], cmap='viridis', rasterized=False, 
-                 bins=200, density=True, range=[[-5, 15], [-5, 15]])
+                 bins=150, density=True, range=[[-5, 15], [-5, 15]])
     ax[1].set_xlabel('x')
     ax[1].set_ylabel('y')
     ax[1].set_title('Empirical density')
@@ -93,7 +93,7 @@ def langevin_sampling_banana(x_samples, *args):
     ax[0].set_title('Unnormalized banana-shaped density')
     ax[1].set_aspect('equal', adjustable='box')
     ax[1].hist2d(x_samples[:, 0], x_samples[:, 1], cmap='viridis', rasterized=False, 
-                 bins=200, density=True, range=[[-5, 5], [-5, 5]])
+                 bins=150, density=True, range=[[-5, 5], [-5, 5]])
     ax[1].set_xlabel('x')
     ax[1].set_ylabel('y')
     ax[1].set_title('Empirical density')

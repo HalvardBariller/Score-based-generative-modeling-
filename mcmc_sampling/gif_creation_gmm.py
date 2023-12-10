@@ -37,21 +37,23 @@ args = parser.parse_args()
 
 
 
-mu_banana = np.array([0, 0])
-sigma_banana = np.eye(2)
+mus = [np.array([0, 0]), np.array([10,10])]
+sigmas = [np.eye(2), np.eye(2)]
+alphas = [0.5, 0.5]
+
 step = 1e-2
 iterations = args.iterations
 
-_, samples = langevin.euler_maruyama_exact_scores(np.array([4,4]), scores.score_banana, 
-                                                            step, iterations, mu_banana, sigma_banana)
+_, samples = langevin.euler_maruyama_exact_scores(np.array([4,4]), scores.gaussian_mixture_score, 
+                                                            step, iterations, mus, sigmas, alphas)
 
 lim = 5
 
-r = np.linspace(-lim, lim, 1000)
+r = np.linspace(-lim, lim+10, 1000)
 x, y = np.meshgrid(r, r)
 z = np.vstack([x.flatten(), y.flatten()]).T
 
-q0 = densities.banana_density(z, mu_banana, sigma_banana)
+q0 = densities.gmm_density(z, mus, sigmas, alphas)
 
 plt.rcParams["font.family"] = "serif"
 fig, axn = plt.subplots(ncols=2, figsize=(15, 8))
@@ -59,19 +61,19 @@ fig, axn = plt.subplots(ncols=2, figsize=(15, 8))
 axn[0].pcolormesh(x, y, q0.reshape(x.shape),
                            cmap='viridis')
 axn[0].set_aspect('equal', adjustable='box')
-axn[0].set_xlim([-lim, lim])
-axn[0].set_ylim([-lim, lim])
+axn[0].set_xlim([-lim, lim+10])
+axn[0].set_ylim([-lim, lim+10])
 axn[0].set_title('True Density')
 
 cmap = matplotlib.cm.get_cmap('viridis')
 bg = cmap(0.)
 axn[1].set_facecolor(bg)
 axn[1].set_aspect('equal', adjustable='box')
-axn[1].set_xlim([-lim, lim])
-axn[1].set_ylim([-lim, lim])
+axn[1].set_xlim([-lim, lim+10])
+axn[1].set_ylim([-lim, lim+10])
 axn[1].set_title('Empirical Density')
 
-fig.suptitle('Langevin Dynamics for Banana distribution', fontsize=40)
+fig.suptitle('Langevin Dynamics for GMM', fontsize=40)
 
 line, = axn[0].plot([], [], lw=2, c='#f3c623')
 scat = axn[0].scatter([], [], c='#dd2c00', s=150, marker='*')
@@ -82,28 +84,30 @@ def init():
 
 def random_walk(i):
     i += 1
-    if i <= 100:
+    if i <= 30:
         z = samples[:i]
     else:
-        z = samples[i-100:i]
+        z = samples[i-30:i]
     line.set_data(z[:, 0], z[:, 1])
     scat.set_offsets(z[-1:])
 
     axn[1].clear()
     axn[1].set_aspect('equal', adjustable='box')
-    axn[1].hist2d(samples[:i, 0], samples[:i, 1], cmap='viridis', rasterized=False, bins=200, density=True)
-    axn[1].set_xlim([-lim, lim])
-    axn[1].set_ylim([-lim, lim])
+    axn[1].hist2d(samples[:i, 0], samples[:i, 1], cmap='viridis', rasterized=False, bins=150, density=True)
+    axn[1].set_xlim([-lim, lim+10])
+    axn[1].set_ylim([-lim, lim+10])
     axn[1].set_title('Empirical Density')
     return line, scat, #
 
 
 from_frame = 1
 upto_frame = len(samples) + from_frame
-base_name = 'banana_langevin'
+base_name = 'gmm_langevin'
 
 anim = animation.FuncAnimation( fig = fig, blit=True, init_func=init, func = random_walk,
                                      interval = 10, frames=range(from_frame, upto_frame))
 
-anim.save('banana_langevin.gif', writer='imagemagick', dpi=200, 
+anim.save('gmm_langevin.gif', writer='imagemagick', dpi=200, 
           progress_callback = lambda i, n: print(f'Saving frame {i} of {n}') if i % 10 == 0 else None)
+
+print('Done!')
