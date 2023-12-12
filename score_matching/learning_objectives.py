@@ -77,7 +77,7 @@ class ScoreMatching():
         # data pertubation 
         perturbed_samples = data + torch.randn_like(data) * self.sigma
         # computation of the target and scores
-        target = - 1 / (data** 2) * (perturbed_samples - data)
+        target = - 1 / (self.sigma** 2) * (perturbed_samples - data)
         scores = model(perturbed_samples)
         # reshape Tensor
         target = target.view(target.shape[0], -1)
