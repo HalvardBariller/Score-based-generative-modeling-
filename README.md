@@ -22,16 +22,6 @@ We first perform score matching on toy distributions to illustrate the method. W
 
 A Score Network is trained on each dataset to estimate the score function of the data distribution. We compare the obtained vector field with the true score function, and show the distance between the two with respect to to the $\ell_2$-norm. 
 
-#### Gaussian Mixture Model
-
-![GMM](/assets/gmm_implicit_score.png)
-![GMM_norm](/assets/gmm_norm_diff_implicit_score.png)
-
-#### Banana-shaped distribution
-
-![Banana](/assets/banana_implicit_score.png)
-![Banana_norm](/assets/banana_norm_diff_implicit_score.png)
-
 
 ### Langevin Dynamics on Toy Distributions
 
