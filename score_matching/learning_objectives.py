@@ -6,16 +6,19 @@ import tqdm
 
 
 class ScoreMatching():
-    def __init__(self, optimizer, loss_type, device,sigma=0.01):
+    def __init__(self, optimizer, loss_type, device,sigma=0.01,anneal_power=2):
         self.optimizer = optimizer
         self.device = device
         self.loss_type = loss_type
         self.loss_functions = {
             'implicit_score_matching': self.implicit_score_matching,
             'denoising_score_matching': self.denoising_score_matching,
-            'sliced_score_matching': self.sliced_score_matching
+            'sliced_score_matching': self.sliced_score_matching,
+            'anneal_denoising_score_matching': self.anneal_dsm_score
         }
-        self.sigma=sigma # sigma to pertubate data in denoising score matching
+        self.sigma=sigma # sigmas to pertubate data in denoising score matching and also anneal dsm
+        self.anneal_power=anneal_power #the factor to multiply lambda(sigma)=sigma^2 so by default anneal power=2
+
         if loss_type not in self.loss_functions:
             raise ValueError(f"Invalid loss type '{loss_type}'. Supported types are: {', '.join(self.loss_functions.keys())}")
         
@@ -110,8 +113,37 @@ class ScoreMatching():
         # Compute the loss as empirical mean
         loss = torch.mean(torch.sum(projections, dim=-1) + score_network_norm, dim = -1)
         return loss
+    
+    def anneal_dsm_score(self,data,score_network,labels):
 
-    def compute_loss(self, data, model):
+        """
+                compute the anneal dsm score for a given batch of data with a given tensor of noise values
+
+                return loss
+        """
+        # convert data to a tensor
+        data=torch.Tensor(data).float()
+
+        # extract the sigmas corresponding to the indices in labels and reshape it as (Batch, 1)
+        used_sigmas = self.sigma[labels].view(data.shape[0], *([1] * len(data.shape[1:])))
+
+        # pertub the origal data by adding the tensor of noises (used_sigmas)
+        perturbed_datas = data + torch.randn_like(data) * used_sigmas
+        # compute the target
+        target = - 1 / (used_sigmas ** 2) * (perturbed_datas - data)
+        # compute the score with our model, we give the labels since we need to take into account the noises used_sigmas
+        #since labels is the vector of indices corresponding to the selected sigmas (used_sigmas)
+        scores = score_network(perturbed_datas, labels)
+        # reshape it 
+        target = target.view(target.shape[0], -1)
+        scores = scores.view(scores.shape[0], -1)
+        # compute the loss accordind to the formula
+        loss = 1 / 2. * ((scores - target) ** 2).sum(dim=-1) * used_sigmas.squeeze() ** self.anneal_power
+        # return the loss 
+        return loss.mean(dim=0)
+
+
+    def compute_loss(self, data, model,labels=None):
         """
         Computes the loss for a given data batch based on the loss type defined in the constructor.
         ----------
@@ -121,7 +153,11 @@ class ScoreMatching():
         Returns:
         loss: the loss (scalar)
         """
-        return self.loss_functions[self.loss_type](data, model)
+         # add the condition to use it when loss is anneal dsm
+        if  self.loss_type=='anneal_denoising_score_matching':
+            return self.loss_functions[self.loss_type](data, model,labels)
+        else:
+            return self.loss_functions[self.loss_type](data, model)
     
     def train_step(self, data, model):
         """
@@ -133,8 +169,19 @@ class ScoreMatching():
         Returns:
         loss: the loss (scalar)
         """
+        
         self.optimizer.zero_grad()
-        loss = self.compute_loss(data, model)
+        
+         # add the condition to use it when loss is anneal dsm
+        if  self.loss_type=='anneal_denoising_score_matching':
+
+            data=torch.Tensor(data).float()
+            # labels is the vector of indices corresponding to the sigmas to be selected for data perturbation
+            labels = torch.randint(0, len(self.sigma), (data.shape[0],))
+            loss = self.compute_loss(data, model,labels)
+        else:
+            loss = self.compute_loss(data, model)
+        
         loss.backward()
         self.optimizer.step()
         return loss.item()
