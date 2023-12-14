@@ -9,7 +9,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 from dataset import scores
 
 
-def plot_estimated_score_gmm(data, clusters, trained_model, mus, sigmas, alphas, difference=False):
+def plot_estimated_score_gmm(data, clusters, trained_model, mus, sigmas, alphas, difference=False,type=None, sigma_list=None):
     """
     Plots the estimated score of a Gaussian mixture model.
     ----------
@@ -21,6 +21,8 @@ def plot_estimated_score_gmm(data, clusters, trained_model, mus, sigmas, alphas,
     sigmas: the covariance matrices of the gaussians.
     alphas: the mixing proportions of the gaussians.
     difference: if True, plots a heatmap of the difference between the true and estimated score w.r.t. l2 norm.
+    type : whether we use anneal dsm or another loss 
+    sigma_list : useful when we used anneal dsm because it's the tensor which contains the values of noise sigmas
     """
 
     fig, ax = plt.subplots(2, 2, figsize=(15, 12))
@@ -32,7 +34,12 @@ def plot_estimated_score_gmm(data, clusters, trained_model, mus, sigmas, alphas,
     ax[0,0].set_ylabel('y')
     ax[0,0].set_title('True score for dataset')
 
-    estimated_scores = trained_model(torch.tensor(data).float().to(device)).cpu().detach().numpy()
+    if type=='anneal_denoising_score_matching':
+        # labels is the vector of indices corresponding to the sigmas to be selected for data perturbation
+        labels = torch.randint(0, len(sigma_list), (data.shape[0],))
+        estimated_scores = trained_model(torch.tensor(data).float().to(device),labels).cpu().detach().numpy()
+    else:
+        estimated_scores = trained_model(torch.tensor(data).float().to(device)).cpu().detach().numpy()
     ax[0,1].scatter(data[:,0], data[:,1], s = 1, c=clusters, alpha=0.5)
     ax[0,1].quiver(data[:,0], data[:,1], estimated_scores[:,0], estimated_scores[:,1], 
                  np.linalg.norm(estimated_scores, axis=1), color='red', alpha=0.5)
@@ -47,7 +54,13 @@ def plot_estimated_score_gmm(data, clusters, trained_model, mus, sigmas, alphas,
     xx, yy = np.meshgrid(x_grid, y_grid)
     grid = np.hstack([xx.reshape(-1, 1), yy.reshape(-1, 1)])
     scores_grid = scores.gaussian_mixture_score(grid, mus, sigmas, alphas)
-    estimated_scores_grid = trained_model(torch.tensor(grid, requires_grad=True).float().to(device)).detach().cpu().numpy()
+
+    if type=='anneal_denoising_score_matching':
+        labels = torch.randint(0, len(sigma_list), (grid.shape[0],))
+        estimated_scores_grid = trained_model(torch.tensor(grid, requires_grad=True).float().to(device),labels).detach().cpu().numpy()
+    else:
+        estimated_scores_grid = trained_model(torch.tensor(grid, requires_grad=True).float().to(device)).detach().cpu().numpy()
+    
 
     ax[1,0].scatter(data[:,0], data[:,1], s = 1, c=clusters, alpha=0.5)
     ax[1,0].quiver(grid[:,0], grid[:,1], scores_grid[:,0], scores_grid[:,1], 
@@ -84,7 +97,7 @@ def plot_estimated_score_gmm(data, clusters, trained_model, mus, sigmas, alphas,
 
 
 
-def plot_estimated_score_banana(data, trained_model, mu, sigma, difference):
+def plot_estimated_score_banana(data, trained_model, mu, sigma, difference,type=None,sigma_list=None):
     """
     Plots the estimated score of a banana-shaped distribution.
     ----------
@@ -94,6 +107,8 @@ def plot_estimated_score_banana(data, trained_model, mu, sigma, difference):
     mu: the mean of the banana-shaped distribution.
     sigma: the covariance matrix of the banana-shaped distribution.
     difference: if True, plots a heatmap of the difference between the true and estimated score w.r.t. l2 norm.
+    type : whether we use anneal dsm or another loss 
+    sigma_list : useful when we used anneal dsm because it's the tensor which contains the values of noise sigmas
     """
 
     fig, ax = plt.subplots(2, 2, figsize=(15, 12))
@@ -105,7 +120,13 @@ def plot_estimated_score_banana(data, trained_model, mu, sigma, difference):
     ax[0,0].set_ylabel('y')
     ax[0,0].set_title('True score for dataset')
 
-    estimated_scores = trained_model(torch.tensor(data).float().to(device)).cpu().detach().numpy()
+    if type=='anneal_denoising_score_matching':
+
+        #labels is the vector of indices corresponding to the sigmas to be selected for data perturbation
+        labels = torch.randint(0, len(sigma_list), (data.shape[0],))
+        estimated_scores = trained_model(torch.tensor(data).float().to(device),labels).cpu().detach().numpy()
+    else:
+        estimated_scores = trained_model(torch.tensor(data).float().to(device)).cpu().detach().numpy()
     ax[0,1].scatter(data[:,0], data[:,1], s = 1, alpha=0.5)
     ax[0,1].quiver(data[:,0], data[:,1], estimated_scores[:,0], estimated_scores[:,1], 
                  np.linalg.norm(estimated_scores, axis=1), color='red', alpha=0.5)
@@ -119,7 +140,13 @@ def plot_estimated_score_banana(data, trained_model, mu, sigma, difference):
     xx, yy = np.meshgrid(x_grid, y_grid)
     grid = np.hstack([xx.reshape(-1, 1), yy.reshape(-1, 1)])
     scores_grid = scores.score_banana(grid, mu, sigma)
-    estimated_scores_grid = trained_model(torch.tensor(grid, requires_grad=True).float().to(device)).detach().cpu().numpy()
+
+
+    if type=='anneal_denoising_score_matching':
+        labels = torch.randint(0, len(sigma_list), (grid.shape[0],))
+        estimated_scores_grid = trained_model(torch.tensor(grid, requires_grad=True).float().to(device),labels).detach().cpu().numpy()
+    else:
+        estimated_scores_grid = trained_model(torch.tensor(grid, requires_grad=True).float().to(device)).detach().cpu().numpy()
 
     ax[1,0].scatter(data[:,0], data[:,1], s = 1, alpha=0.5)
     ax[1,0].quiver(grid[:,0], grid[:,1], scores_grid[:,0], scores_grid[:,1], 
