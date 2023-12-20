@@ -21,11 +21,11 @@ class ToyScoreNetwork(nn.Module):
     
 # conditional model for NCSN 
 class ConditionalLinear(nn.Module):
-    def __init__(self, num_in, num_out, num_classes):
+    def __init__(self, num_in, num_out, num_levels):
         super().__init__()
         self.num_out = num_out
         self.lin = nn.Linear(num_in, num_out)
-        self.embed = nn.Embedding(num_classes, num_out)
+        self.embed = nn.Embedding(num_levels, num_out)
         self.embed.weight.data.uniform_()
 
     def forward(self, x, y):
@@ -35,10 +35,10 @@ class ConditionalLinear(nn.Module):
         return out
     
 class ConditionalModel(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, num_levels):
         super().__init__()
-        self.lin1 = ConditionalLinear(2, 128, num_classes)
-        self.lin2 = ConditionalLinear(128, 128, num_classes)
+        self.lin1 = ConditionalLinear(2, 128, num_levels)
+        self.lin2 = ConditionalLinear(128, 128, num_levels)
         self.lin3 = nn.Linear(128, 2)
     
     def forward(self, x, y):
