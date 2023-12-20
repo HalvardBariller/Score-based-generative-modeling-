@@ -2,6 +2,7 @@ import numpy as np
 import numpy as np
 from __future__ import division
 import numpy as np
+from scipy.stats import multivariate_normal
 import matplotlib.pyplot as plt
 import scipy as scp
 import pylab as pyl
@@ -86,7 +87,7 @@ def banana_shaped_sampling(N, mu, sigma, d = 2, b=0.5):
 
     return X
 
-class EchantillonneurMelangeGaussien:
+class dicrete:
     def __init__(self, center_star, size_star, m_start, scale=0.001):
         """
         Initialise l'échantillonneur pour un mélange de gaussiennes.
@@ -149,4 +150,26 @@ class EchantillonneurMelangeGaussien:
         choix_gaussienne = np.random.choice(n_gaussians, size=n_samples, p=self.poids.ravel())
         echantillons = np.array([np.random.multivariate_normal(self.Y_star[g], self.covariances[g]) for g in choix_gaussienne])
         return echantillons
+    
+    def gradient_log_melange(self, x):
+        """
+        Calcule le gradient du logarithme du mélange de gaussiennes en un point x.
+
+        :param x: Le point où calculer le gradient (un vecteur numpy).
+        :return: Le gradient du logarithme du mélange de gaussiennes au point x.
+        """
+        n_gaussians = len(self.poids)
+        numerateur = np.zeros_like(x)
+        denominateur = 0
+
+        for i in range(n_gaussians):
+            diff = x - self.Y_star[i]
+            inv_cov = np.linalg.inv(self.covariances[i])
+            densite = multivariate_normal.pdf(x, mean=self.Y_star[i], cov=self.covariances[i])
+            grad_gaussienne = -inv_cov.dot(diff) * densite
+            numerateur += self.poids[i] * grad_gaussienne
+            denominateur += self.poids[i] * densite
+
+        return numerateur / denominateur
+
 
