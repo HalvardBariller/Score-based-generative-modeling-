@@ -1,4 +1,14 @@
 import numpy as np
+import numpy as np
+from __future__ import division
+import numpy as np
+import matplotlib.pyplot as plt
+import scipy as scp
+import pylab as pyl
+import random
+from time import time
+import warnings
+warnings.filterwarnings('ignore')
 
 def gaussian_sampling(mu, sigma, n_samples = 1000):
     """
@@ -75,3 +85,4 @@ def banana_shaped_sampling(N, mu, sigma, d = 2, b=0.5):
     X[:,1] -= b * (X[:,0]**2 - sigma[0,0])
 
     return X
+
