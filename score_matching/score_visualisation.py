@@ -83,8 +83,9 @@ def plot_estimated_score_gmm(data, clusters, trained_model, mus, sigmas, alphas,
     if difference:
         fig2, ax2 = plt.subplots(1, 1, figsize=(15, 6))
         difference = np.linalg.norm(scores_grid - estimated_scores_grid, axis=1)
-        ax2.contourf(x_grid, y_grid, difference.reshape(xx.shape), levels = 100, cmap='seismic')
-        fig2.colorbar(ax2.contourf(x_grid, y_grid, difference.reshape(xx.shape), levels = 100, cmap='seismic'))
+        levels = np.linspace(0, 20, 100)
+        ax2.contourf(x_grid, y_grid, difference.reshape(xx.shape), levels = levels, cmap='seismic')
+        fig2.colorbar(ax2.contourf(x_grid, y_grid, difference.reshape(xx.shape), levels = levels, cmap='seismic'))
         ax2.scatter(data[:,0], data[:,1], s = 1, c='white', alpha=0.5)
         ax2.set_xlabel('x')
         ax2.set_ylabel('y')
@@ -169,8 +170,9 @@ def plot_estimated_score_banana(data, trained_model, mu, sigma, difference,type=
     if difference:
         fig2, ax2 = plt.subplots(1, 1, figsize=(15, 6))
         difference = np.linalg.norm(scores_grid - estimated_scores_grid, axis=1)
-        ax2.contourf(x_grid, y_grid, difference.reshape(xx.shape), levels = 100, cmap='seismic')
-        fig2.colorbar(ax2.contourf(x_grid, y_grid, difference.reshape(xx.shape), levels = 100, cmap='seismic'))
+        levels = np.linspace(0,40, 100)
+        ax2.contourf(x_grid, y_grid, difference.reshape(xx.shape), levels = levels, cmap='seismic')
+        fig2.colorbar(ax2.contourf(x_grid, y_grid, difference.reshape(xx.shape), levels = levels, cmap='seismic'))
         ax2.scatter(data[:,0], data[:,1], s = 1, c='white', alpha=0.5)
         ax2.set_xlabel('x')
         ax2.set_ylabel('y')
