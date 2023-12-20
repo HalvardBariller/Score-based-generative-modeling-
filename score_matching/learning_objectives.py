@@ -2,7 +2,7 @@ import torch
 import torch.autograd as autograd
 import torch.nn as nn
 import matplotlib.pyplot as plt
-import tqdm
+from tqdm import tqdm
 
 
 class ScoreMatching():
@@ -200,7 +200,7 @@ class ScoreMatching():
         losses_hist: a list of the losses during training
         """
         losses_hist = []
-        for i in tqdm.tqdm(range(epochs)):
+        for i in tqdm(range(epochs)):
             loss = self.train_step(data, model)
             losses_hist.append(loss)
             if verbose and i % 100 == 0:
