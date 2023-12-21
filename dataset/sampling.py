@@ -138,38 +138,124 @@ class dicrete:
             covariances.append(cov)
         return covariances
 
-    def echantillonne(self, n_samples):
+    def echantillonne_avec_clusters(self, n_samples):
         """
-        Génère des échantillons à partir du mélange de gaussiennes.
+        Génère des échantillons à partir du mélange de gaussiennes, en retournant également les clusters.
 
         :param n_samples: Le nombre d'échantillons à générer.
-        :return: Un tableau d'échantillons.
+        :return: Un tuple contenant un tableau d'échantillons et un tableau des indices de clusters.
         """
         n_gaussians = len(self.poids)
         assert np.isclose(sum(self.poids), 1), "La somme des poids doit être égale à 1"
-        choix_gaussienne = np.random.choice(n_gaussians, size=n_samples, p=self.poids.ravel())
-        echantillons = np.array([np.random.multivariate_normal(self.Y_star[g], self.covariances[g]) for g in choix_gaussienne])
-        return echantillons
-    
-    def gradient_log_melange(self, x):
-        """
-        Calcule le gradient du logarithme du mélange de gaussiennes en un point x.
 
-        :param x: Le point où calculer le gradient (un vecteur numpy).
-        :return: Le gradient du logarithme du mélange de gaussiennes au point x.
-        """
-        n_gaussians = len(self.poids)
-        numerateur = np.zeros_like(x)
-        denominateur = 0
+        echantillons = np.zeros((n_samples, 2))
+        clusters = np.zeros(n_samples, dtype=int)
+
+        cumulative_sum = np.cumsum(self.poids)
+        cumulative_sum[-1] = 1  # Assure que la somme est exactement 1
+        batch_limits = np.searchsorted(cumulative_sum, np.random.rand(n_samples))
 
         for i in range(n_gaussians):
-            diff = x - self.Y_star[i]
-            inv_cov = np.linalg.inv(self.covariances[i])
-            densite = multivariate_normal.pdf(x, mean=self.Y_star[i], cov=self.covariances[i])
-            grad_gaussienne = -inv_cov.dot(diff) * densite
-            numerateur += self.poids[i] * grad_gaussienne
-            denominateur += self.poids[i] * densite
+            indices = (batch_limits == i)
+            n_gaussian_samples = np.sum(indices)
+            echantillons[indices] = np.random.multivariate_normal(self.Y_star[i], self.covariances[i], n_gaussian_samples)
+            clusters[indices] = i
 
-        return numerateur / denominateur
+        return echantillons, clusters
+    
+    
+    def density(self, x):
+        densities = [self.poids[i] * multivariate_normal.pdf(x, mean=self.Y_star[i], cov=self.covariances[i]) 
+                  for i in range(len(self.poids))]
+        return np.sum(densities, axis=0)
+
+    def gmm_density_heatmap(self):
+        """
+        Affiche une carte de chaleur représentant la densité du mélange de gaussiennes.
+        """
+        x_grid, y_grid = np.meshgrid(np.linspace(-5, 15, 50), np.linspace(-5, 15, 50))
+        z_grid = np.empty(x_grid.shape)
+        for i in range(x_grid.shape[0]):
+            for j in range(x_grid.shape[1]):
+                x = np.array([x_grid[i, j], y_grid[i, j]])
+                z_grid[i, j] = self.density(x)
+        plt.contourf(x_grid, y_grid, z_grid, levels=100)
+        plt.colorbar()
+        plt.xlabel('x')
+        plt.ylabel('y')
+
+    def gmm_score_plot(self, data):
+        # Vous devez définir la fonction 'gaussian_mixture_score' pour calculer le score
+        # scores_vec = gaussian_mixture_score(data, self.Y_star, self.covariances, self.poids)
+
+        plt.scatter(data[:,0], data[:,1], s = 1, alpha=0.5)
+        # plt.quiver(data[:,0], data[:,1], scores_vec[:,0], scores_vec[:,1], 
+        #            np.linalg.norm(scores_vec, axis=1), color='red', alpha=0.5)
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.title('Gaussian discrete star')
+        plt.show()
+
+    
+
+def plot_gaussian_mixture_scores(data, scores_vec):
+    """
+    Plots the scores (gradients) of a Gaussian mixture model for a given dataset.
+
+    :param data: The dataset (numpy array).
+    :param scores_vec: The computed scores (gradients) for each data point.
+    """
+    fig, ax = plt.subplots(1, 2, figsize=(15, 6))
+
+    # Plot the scores for the dataset
+    ax[0].scatter(data[:, 0], data[:, 1], s=1, alpha=0.5)
+    ax[0].quiver(data[:, 0], data[:, 1], scores_vec[:, 0], scores_vec[:, 1],
+                 np.linalg.norm(scores_vec, axis=1), color='red', alpha=0.5)
+    ax[0].set_xlabel('x')
+    ax[0].set_ylabel('y')
+    ax[0].set_title('Gaussian mixture score for dataset')
+
+    # Plot the score over a grid
+    x_grid = np.linspace(np.min(data[:, 0]), np.max(data[:, 0]), 50)
+    y_grid = np.linspace(np.min(data[:, 1]), np.max(data[:, 1]), 50)
+    xx, yy = np.meshgrid(x_grid, y_grid)
+    grid = np.hstack([xx.reshape(-1, 1), yy.reshape(-1, 1)])
+    scores_grid = np.array([gradient_log_melange(point, poids, Y_star, covariances) for point in grid])
+    ax[1].scatter(data[:, 0], data[:, 1], s=1, alpha=0.5)
+    ax[1].quiver(grid[:, 0], grid[:, 1], scores_grid[:, 0], scores_grid[:, 1],
+                 np.linalg.norm(scores_grid, axis=1), color='red', alpha=0.5)
+    ax[1].set_xlabel('x')
+    ax[1].set_ylabel('y')
+    ax[1].set_title('Gaussian mixture score over grid')
+
+    fig.suptitle('Gaussian Mixture Model Score')
+    fig.tight_layout()
+    plt.show()
 
 
+def gradient_log_start(X, poids, Y_star, covariances):
+    """
+    Calculate the gradient of the log-likelihood of a Gaussian mixture model.
+
+    :param X: An array of points where the gradient is calculated (numpy array of points).
+    :param poids: The weights of each Gaussian in the mixture.
+    :param Y_star: The means of each Gaussian in the mixture.
+    :param covariances: The covariance matrices of each Gaussian in the mixture.
+    :return: The gradient of the log-likelihood of the Gaussian mixture at each point in X.
+    """
+    n_gaussians = len(poids)
+    n_samples = X.shape[0]
+    gradients = np.zeros((n_samples, X.shape[1]))
+    
+    for i in range(n_gaussians):
+        diff = X - Y_star[i]
+        inv_cov = np.linalg.inv(covariances[i])
+        densities = multivariate_normal.pdf(X, mean=Y_star[i], cov=covariances[i])
+        grad_gaussiennes = -np.dot(diff, inv_cov) * densities[:, np.newaxis]
+        gradients += poids[i] * grad_gaussiennes
+
+    sum_densities = np.sum([poids[i] * multivariate_normal.pdf(X, mean=Y_star[i], cov=covariances[i]) 
+                            for i in range(n_gaussians)], axis=0)
+    gradients /= sum_densities[:, np.newaxis]
+
+    return gradients

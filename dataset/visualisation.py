@@ -178,3 +178,71 @@ def banana_score_plot(banana_shaped_data):
     fig.suptitle('Banana-shaped score')
     fig.tight_layout()
     plt.show()
+
+
+def plot_start(self, samples, clusters, contours=True):
+    mu = self.Y_star
+    sigma = self.covariances
+    assert len(mu) == len(sigma), 'mu and sigma must have the same length'
+    assert samples.shape[1] == 2, 'samples must be 2-dimensional'
+
+    for i in range(len(mu)):
+        cluster_samples = samples[clusters == i]
+
+        # Skip plotting for empty clusters
+        if len(cluster_samples) == 0:
+            continue
+
+        x, y = cluster_samples.T
+        plt.scatter(x, y, alpha=0.5)
+
+        if contours:
+            plt.plot(mu[i][0], mu[i][1], 'x', color='red')
+            x_grid, y_grid = np.meshgrid(np.linspace(min(x), max(x), 100), 
+                                         np.linspace(min(y), max(y), 100))
+            z_grid = np.empty(x_grid.shape)
+            for j in range(x_grid.shape[0]):
+                for k in range(x_grid.shape[1]):
+                    x_point = np.array([x_grid[j, k], y_grid[j, k]])
+                    z_grid[j, k] = np.exp(-0.5 * (x_point - mu[i]).T @ np.linalg.inv(sigma[i]) 
+                                          @ (x_point - mu[i])) / (2 * np.pi * np.sqrt(np.linalg.det(sigma[i])))
+            plt.contour(x_grid, y_grid, z_grid, levels=5, colors='black', alpha=1, linewidths=0.5)
+
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.title('Gaussian star discrete')
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_start_sans_cluster(self, samples, contours=True):
+    mu = self.Y_star
+    sigma = self.covariances
+    assert len(mu) == len(sigma), 'mu and sigma must have the same length'
+    assert samples.shape[1] == 2, 'samples must be 2-dimensional'
+
+    # Plot all samples with the same color
+    plt.scatter(samples[:, 0], samples[:, 1], alpha=0.5)
+
+    if contours:
+        for i in range(len(mu)):
+            plt.plot(mu[i][0], mu[i][1], 'x', color='red')
+            x_grid, y_grid = np.meshgrid(np.linspace(min(samples[:, 0]), max(samples[:, 0]), 100), 
+                                         np.linspace(min(samples[:, 1]), max(samples[:, 1]), 100))
+            z_grid = np.empty(x_grid.shape)
+            for j in range(x_grid.shape[0]):
+                for k in range(x_grid.shape[1]):
+                    x_point = np.array([x_grid[j, k], y_grid[j, k]])
+                    z_grid[j, k] = np.exp(-0.5 * (x_point - mu[i]).T @ np.linalg.inv(sigma[i]) 
+                                          @ (x_point - mu[i])) / (2 * np.pi * np.sqrt(np.linalg.det(sigma[i])))
+            plt.contour(x_grid, y_grid, z_grid, levels=5, colors='black', alpha=1, linewidths=0.5)
+
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.title('Gaussian mixture')
+    plt.tight_layout()
+    plt.show()
+
+
+
+
