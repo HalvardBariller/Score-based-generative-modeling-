@@ -196,43 +196,6 @@ class dicrete:
         plt.title('Gaussian discrete star')
         plt.show()
 
-    
-
-def plot_gaussian_mixture_scores(data, scores_vec):
-    """
-    Plots the scores (gradients) of a Gaussian mixture model for a given dataset.
-
-    :param data: The dataset (numpy array).
-    :param scores_vec: The computed scores (gradients) for each data point.
-    """
-    fig, ax = plt.subplots(1, 2, figsize=(15, 6))
-
-    # Plot the scores for the dataset
-    ax[0].scatter(data[:, 0], data[:, 1], s=1, alpha=0.5)
-    ax[0].quiver(data[:, 0], data[:, 1], scores_vec[:, 0], scores_vec[:, 1],
-                 np.linalg.norm(scores_vec, axis=1), color='red', alpha=0.5)
-    ax[0].set_xlabel('x')
-    ax[0].set_ylabel('y')
-    ax[0].set_title('Gaussian mixture score for dataset')
-
-    # Plot the score over a grid
-    x_grid = np.linspace(np.min(data[:, 0]), np.max(data[:, 0]), 50)
-    y_grid = np.linspace(np.min(data[:, 1]), np.max(data[:, 1]), 50)
-    xx, yy = np.meshgrid(x_grid, y_grid)
-    grid = np.hstack([xx.reshape(-1, 1), yy.reshape(-1, 1)])
-    scores_grid = np.array([gradient_log_melange(point, poids, Y_star, covariances) for point in grid])
-    ax[1].scatter(data[:, 0], data[:, 1], s=1, alpha=0.5)
-    ax[1].quiver(grid[:, 0], grid[:, 1], scores_grid[:, 0], scores_grid[:, 1],
-                 np.linalg.norm(scores_grid, axis=1), color='red', alpha=0.5)
-    ax[1].set_xlabel('x')
-    ax[1].set_ylabel('y')
-    ax[1].set_title('Gaussian mixture score over grid')
-
-    fig.suptitle('Gaussian Mixture Model Score')
-    fig.tight_layout()
-    plt.show()
-
-
 def gradient_log_start(X, poids, Y_star, covariances):
     """
     Calculate the gradient of the log-likelihood of a Gaussian mixture model.
@@ -259,3 +222,40 @@ def gradient_log_start(X, poids, Y_star, covariances):
     gradients /= sum_densities[:, np.newaxis]
 
     return gradients
+    
+
+def plot_gaussian_mixture_scores(data, scores_vec):
+    """
+    Plots the scores (gradients) of a Gaussian mixture model for a given dataset.
+
+    :param data: The dataset (numpy array).
+    :param scores_vec: The computed scores (gradients) for each data point.
+    """
+    fig, ax = plt.subplots(1, 2, figsize=(15, 6))
+
+    # Plot the scores for the dataset
+    ax[0].scatter(data[:, 0], data[:, 1], s=1, alpha=0.5)
+    ax[0].quiver(data[:, 0], data[:, 1], scores_vec[:, 0], scores_vec[:, 1],
+                 np.linalg.norm(scores_vec, axis=1), color='red', alpha=0.5)
+    ax[0].set_xlabel('x')
+    ax[0].set_ylabel('y')
+    ax[0].set_title('Gaussian mixture score for dataset')
+
+    # Plot the score over a grid
+    x_grid = np.linspace(np.min(data[:, 0]), np.max(data[:, 0]), 50)
+    y_grid = np.linspace(np.min(data[:, 1]), np.max(data[:, 1]), 50)
+    xx, yy = np.meshgrid(x_grid, y_grid)
+    grid = np.hstack([xx.reshape(-1, 1), yy.reshape(-1, 1)])
+    scores_grid = np.array([gradient_log_start(point, poids, Y_star, covariances) for point in grid])
+    ax[1].scatter(data[:, 0], data[:, 1], s=1, alpha=0.5)
+    ax[1].quiver(grid[:, 0], grid[:, 1], scores_grid[:, 0], scores_grid[:, 1],
+                 np.linalg.norm(scores_grid, axis=1), color='red', alpha=0.5)
+    ax[1].set_xlabel('x')
+    ax[1].set_ylabel('y')
+    ax[1].set_title('Gaussian mixture score over grid')
+
+    fig.suptitle('Gaussian Mixture Model Score')
+    fig.tight_layout()
+    plt.show()
+
+
