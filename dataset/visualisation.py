@@ -190,6 +190,7 @@ def plot_start(self, samples, clusters, contours=True):
         cluster_samples = samples[clusters == i]
 
         # Skip plotting for empty clusters
+        
         if len(cluster_samples) == 0:
             continue
 

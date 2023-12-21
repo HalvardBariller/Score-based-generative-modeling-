@@ -1,7 +1,12 @@
 from __future__ import division
 import numpy as np
+from . import learning_objectives, toy_models
+
+import matplotlib.pyplot as plt
 import numpy as np
-import numpy as np
+import torch
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 from scipy.stats import multivariate_normal
 import matplotlib.pyplot as plt
 import scipy as scp
@@ -156,7 +161,7 @@ class Discrete:
         clusters = np.zeros(n_samples, dtype=int)
 
         cumulative_sum = np.cumsum(self.weights)
-        cumulative_sum[-1] = 1  # Assure que la somme est exactement 1
+        cumulative_sum[-1] = 1 
         batch_limits = np.searchsorted(cumulative_sum, np.random.rand(n_samples))
 
         for i in range(n_gaussians):
@@ -235,7 +240,7 @@ class Discrete:
                      np.linalg.norm(scores_vec, axis=1), color='red', alpha=0.5)
         ax[0].set_xlabel('x')
         ax[0].set_ylabel('y')
-        ax[0].set_title('Gaussian mixture score for dataset')
+        ax[0].set_title('score of Gaussian discrete star data')
 
         # Plot the score over a grid
         x_grid = np.linspace(np.min(data[:, 0]), np.max(data[:, 0]), 50)
@@ -248,15 +253,73 @@ class Discrete:
                      np.linalg.norm(scores_grid, axis=1), color='red', alpha=0.5)
         ax[1].set_xlabel('x')
         ax[1].set_ylabel('y')
-        ax[1].set_title('Gaussian mixture score over grid')
+        ax[1].set_title('Gaussian discrete star score over grid')
 
         # Visualize the score vectors on the grid
         ax[1].quiver(grid[:, 0], grid[:, 1], scores_grid[:, 0], scores_grid[:, 1],
                      np.linalg.norm(scores_grid, axis=1), color='red', alpha=0.5)
         
-        fig.suptitle('Gaussian Mixture Model Score Visualization')
+        fig.suptitle('Gaussian discrete star Model Score Visualization')
         fig.tight_layout()
         plt.show()
+        
+    def plot_estimated_score_star(self, data, trained_model, difference=False, type=None, sigma_list=None):
+        """
+        Plots the estimated score of a Gaussian mixture model.
 
+        :param data: The samples.
+        :param trained_model: The trained score network.
+        :param difference: If True, plots a heatmap of the difference between the true and estimated score.
+        :param type: Type of loss used (e.g., 'anneal_denoising_score_matching').
+        :param sigma_list: List of noise sigma values, used if type is 'anneal_denoising_score_matching'.
+        """
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        fig, ax = plt.subplots(2, 2, figsize=(15, 12))
+
+        # Compute and plot true scores
+        true_score = self.gradient_log_star(data)
+        ax[0, 0].scatter(data[:, 0], data[:, 1], s=1, c='blue', alpha=0.5)
+        ax[0, 0].quiver(data[:, 0], data[:, 1], true_score[:, 0], true_score[:, 1], 
+                        np.linalg.norm(true_score, axis=1), color='red', alpha=0.5)
+        ax[0, 0].set_xlabel('x')
+        ax[0, 0].set_ylabel('y')
+        ax[0, 0].set_title('True score for dataset')
+
+        # Compute and plot estimated scores
+        if type == 'anneal_denoising_score_matching':
+            labels = torch.randint(0, len(sigma_list), (data.shape[0],))
+            estimated_scores = trained_model(torch.tensor(data).float().to(device), labels).cpu().detach().numpy()
+        else:
+            estimated_scores = trained_model(torch.tensor(data).float().to(device)).cpu().detach().numpy()
+
+        ax[0, 1].scatter(data[:, 0], data[:, 1], s=1, c='blue', alpha=0.5)
+        ax[0, 1].quiver(data[:, 0], data[:, 1], estimated_scores[:, 0], estimated_scores[:, 1], 
+                        np.linalg.norm(estimated_scores, axis=1), color='red', alpha=0.5)
+        ax[0, 1].set_xlabel('x')
+        ax[0, 1].set_ylabel('y')
+        ax[0, 1].set_title('Estimated score for dataset')
+
+        # Plot the difference heatmap, if requested
+        if difference:
+            x_grid, y_grid = np.meshgrid(np.linspace(np.min(data[:, 0]), np.max(data[:, 0]), 50), 
+                                         np.linspace(np.min(data[:, 1]), np.max(data[:, 1]), 50))
+            grid = np.hstack([x_grid.reshape(-1, 1), y_grid.reshape(-1, 1)])
+            scores_grid = self.gradient_log_star(grid)
+            if type == 'anneal_denoising_score_matching':
+                labels = torch.randint(0, len(sigma_list), (grid.shape[0],))
+                estimated_scores_grid = trained_model(torch.tensor(grid, requires_grad=True).float().to(device), labels).detach().cpu().numpy()
+            else:
+                estimated_scores_grid = trained_model(torch.tensor(grid, requires_grad=True).float().to(device)).detach().cpu().numpy()
+
+            difference = np.linalg.norm(scores_grid - estimated_scores_grid, axis=1)
+            levels = np.linspace(0, np.max(difference), 100)
+            ax[1, 0].contourf(x_grid, y_grid, difference.reshape(x_grid.shape), levels=levels, cmap='seismic')
+            ax[1, 0].scatter(data[:, 0], data[:, 1], s=1, c='white', alpha=0.5)
+            ax[1, 0].set_xlabel('x')
+            ax[1, 0].set_ylabel('y')
+            ax[1, 0].set_title('Difference between true and estimated score')
+
+        plt.show()
 
 
