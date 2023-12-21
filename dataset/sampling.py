@@ -87,30 +87,31 @@ def banana_shaped_sampling(N, mu, sigma, d = 2, b=0.5):
 
     return X
 
-class dicrete:
+class Discrete:
     def __init__(self, center_star, size_star, m_start, scale=0.001):
         """
-        Initialise l'échantillonneur pour un mélange de gaussiennes.
+        Initializes the sampler for a Gaussian mixture.
 
-        :param center_star: Le centre de l'étoile autour de laquelle les gaussiennes sont centrées.
-        :param size_star: La taille de l'étoile, influant sur l'écart des moyennes des gaussiennes.
-        :param m_start: Le nombre de points (et donc de gaussiennes) dans l'étoile.
-        :param scale: Le facteur d'échelle pour les covariances, déterminant la concentration des distributions.
+        :param center_star: The center of the star around which the Gaussians are centered.
+        :param size_star: The size of the star, influencing the spread of the Gaussians' means.
+        :param m_start: The number of points (and thus Gaussians) in the star.
+        :param scale: The scale factor for the covariances, determining the concentration of the distributions.
         """
         self.center_star = center_star
         self.size_star = size_star
         self.m_start = m_start
         self.scale = scale
-        self.Y_star = self.create_star_points()  # Crée les points en forme d'étoile
-        self.poids = self.normalize(np.random.rand(self.m_start, 1))  # Normalise les poids aléatoires
-        self.covariances = self.genere_covariances_concentre()  # Génère les covariances concentrées
+        self.Y_star = self.create_star_points()
+        self.weights = self.normalize(np.random.rand(self.m_start, 1))
+        self.covariances = self.generate_concentrated_covariances()
 
     def create_star_points(self):
         """
-        Génère des points formant une étoile pour les moyennes des gaussiennes.
+        Generates star-shaped points for the means of the Gaussians.
 
-        :return: Un tableau numpy des coordonnées des points en forme d'étoile.
+        :return: A numpy array of the coordinates of the star-shaped points.
         """
+
         angles = np.linspace(0, 2 * np.pi, self.m_start, endpoint=False)
         r = self.size_star * (1 + np.sin(5 * angles))  
         x = self.center_star[0] + r * np.cos(angles)
@@ -119,39 +120,42 @@ class dicrete:
 
     def normalize(self, a):
         """
-        Normalise un tableau pour que sa somme soit égale à 1.
+        Normalizes an array so that its sum equals 1.
 
-        :param a: Le tableau à normaliser.
-        :return: Le tableau normalisé.
-        """
+        :param a: The array to be normalized.
+        :return: The normalized array.
+         """
+
         return a / np.sum(a)
 
-    def genere_covariances_concentre(self):
+    def generate_concentrated_covariances(self):
         """
-        Génère des matrices de covariance très concentrées pour chaque gaussienne.
+        Generates highly concentrated covariance matrices for each Gaussian.
 
-        :return: Une liste de matrices de covariance.
+        :return: A list of covariance matrices.
         """
+
         covariances = []
         for _ in range(self.m_start):
             cov = np.array([[self.scale, 0], [0, self.scale]])
             covariances.append(cov)
         return covariances
 
-    def echantillonne_avec_clusters(self, n_samples):
+    def sample_with_clusters(self, n_samples):
         """
-        Génère des échantillons à partir du mélange de gaussiennes, en retournant également les clusters.
+        Generates samples from the Gaussian mixture, also returning the clusters.
 
-        :param n_samples: Le nombre d'échantillons à générer.
-        :return: Un tuple contenant un tableau d'échantillons et un tableau des indices de clusters.
+        :param n_samples: The number of samples to generate.
+        :return: A tuple containing an array of samples and an array of cluster indices.
         """
-        n_gaussians = len(self.poids)
-        assert np.isclose(sum(self.poids), 1), "La somme des poids doit être égale à 1"
+
+        n_gaussians = len(self.weights)
+        assert np.isclose(sum(self.weights), 1) 
 
         echantillons = np.zeros((n_samples, 2))
         clusters = np.zeros(n_samples, dtype=int)
 
-        cumulative_sum = np.cumsum(self.poids)
+        cumulative_sum = np.cumsum(self.weights)
         cumulative_sum[-1] = 1  # Assure que la somme est exactement 1
         batch_limits = np.searchsorted(cumulative_sum, np.random.rand(n_samples))
 
@@ -165,14 +169,12 @@ class dicrete:
     
     
     def density(self, x):
-        densities = [self.poids[i] * multivariate_normal.pdf(x, mean=self.Y_star[i], cov=self.covariances[i]) 
-                  for i in range(len(self.poids))]
+        densities = [self.weights[i] * multivariate_normal.pdf(x, mean=self.Y_star[i], cov=self.covariances[i]) 
+                  for i in range(len(self.weights))]
         return np.sum(densities, axis=0)
 
     def gmm_density_heatmap(self):
-        """
-        Affiche une carte de chaleur représentant la densité du mélange de gaussiennes.
-        """
+
         x_grid, y_grid = np.meshgrid(np.linspace(-5, 15, 50), np.linspace(-5, 15, 50))
         z_grid = np.empty(x_grid.shape)
         for i in range(x_grid.shape[0]):
@@ -184,9 +186,7 @@ class dicrete:
         plt.xlabel('x')
         plt.ylabel('y')
 
-    def gmm_score_plot(self, data):
-        # Vous devez définir la fonction 'gaussian_mixture_score' pour calculer le score
-        # scores_vec = gaussian_mixture_score(data, self.Y_star, self.covariances, self.poids)
+    def plot_simple(self, data):
 
         plt.scatter(data[:,0], data[:,1], s = 1, alpha=0.5)
         # plt.quiver(data[:,0], data[:,1], scores_vec[:,0], scores_vec[:,1], 
@@ -196,66 +196,67 @@ class dicrete:
         plt.title('Gaussian discrete star')
         plt.show()
 
-def gradient_log_start(X, poids, Y_star, covariances):
-    """
-    Calculate the gradient of the log-likelihood of a Gaussian mixture model.
+    def gradient_log_star(self, X):
+        """
+        Calculate the gradient of the log-likelihood of a Gaussian mixture model.
 
-    :param X: An array of points where the gradient is calculated (numpy array of points).
-    :param poids: The weights of each Gaussian in the mixture.
-    :param Y_star: The means of each Gaussian in the mixture.
-    :param covariances: The covariance matrices of each Gaussian in the mixture.
-    :return: The gradient of the log-likelihood of the Gaussian mixture at each point in X.
-    """
-    n_gaussians = len(poids)
-    n_samples = X.shape[0]
-    gradients = np.zeros((n_samples, X.shape[1]))
+        :param X: An array of points where the gradient is calculated (numpy array of points).
+        :return: The gradient of the log-likelihood of the Gaussian mixture at each point in X.
+        """
+        n_gaussians = len(self.weights)
+        n_samples = X.shape[0]
+        gradients = np.zeros((n_samples, X.shape[1]))
+        
+        for i in range(n_gaussians):
+            diff = X - self.Y_star[i]
+            inv_cov = np.linalg.inv(self.covariances[i])
+            densities = multivariate_normal.pdf(X, mean=self.Y_star[i], cov=self.covariances[i])
+            grad_gaussiennes = -np.dot(diff, inv_cov) * densities[:, np.newaxis]
+            gradients += self.weights[i] * grad_gaussiennes
+
+        sum_densities = np.sum([self.weights[i] * multivariate_normal.pdf(X, mean=self.Y_star[i], cov=self.covariances[i]) 
+                                for i in range(n_gaussians)], axis=0)
+        gradients /= sum_densities[:, np.newaxis]
+
+        return gradients
     
-    for i in range(n_gaussians):
-        diff = X - Y_star[i]
-        inv_cov = np.linalg.inv(covariances[i])
-        densities = multivariate_normal.pdf(X, mean=Y_star[i], cov=covariances[i])
-        grad_gaussiennes = -np.dot(diff, inv_cov) * densities[:, np.newaxis]
-        gradients += poids[i] * grad_gaussiennes
+    def plot_star_scores(self, data):
+        """
+        Plots the scores (gradients) of a Gaussian mixture model for a given dataset.
 
-    sum_densities = np.sum([poids[i] * multivariate_normal.pdf(X, mean=Y_star[i], cov=covariances[i]) 
-                            for i in range(n_gaussians)], axis=0)
-    gradients /= sum_densities[:, np.newaxis]
+        :param data: The dataset (numpy array).
+        """
+        scores_vec = self.gradient_log_star(data)
+        fig, ax = plt.subplots(1, 2, figsize=(15, 6))
 
-    return gradients
-    
+        # Plot the scores for the dataset
+        ax[0].scatter(data[:, 0], data[:, 1], s=1, alpha=0.5)
+        ax[0].quiver(data[:, 0], data[:, 1], scores_vec[:, 0], scores_vec[:, 1],
+                     np.linalg.norm(scores_vec, axis=1), color='red', alpha=0.5)
+        ax[0].set_xlabel('x')
+        ax[0].set_ylabel('y')
+        ax[0].set_title('Gaussian mixture score for dataset')
 
-def plot_gaussian_mixture_scores(data, scores_vec):
-    """
-    Plots the scores (gradients) of a Gaussian mixture model for a given dataset.
+        # Plot the score over a grid
+        x_grid = np.linspace(np.min(data[:, 0]), np.max(data[:, 0]), 50)
+        y_grid = np.linspace(np.min(data[:, 1]), np.max(data[:, 1]), 50)
+        xx, yy = np.meshgrid(x_grid, y_grid)
+        grid = np.hstack([xx.reshape(-1, 1), yy.reshape(-1, 1)])
+        scores_grid = self.gradient_log_star(grid)
+        ax[1].scatter(data[:, 0], data[:, 1], s=1, alpha=0.5)
+        ax[1].quiver(grid[:, 0], grid[:, 1], scores_grid[:, 0], scores_grid[:, 1],
+                     np.linalg.norm(scores_grid, axis=1), color='red', alpha=0.5)
+        ax[1].set_xlabel('x')
+        ax[1].set_ylabel('y')
+        ax[1].set_title('Gaussian mixture score over grid')
 
-    :param data: The dataset (numpy array).
-    :param scores_vec: The computed scores (gradients) for each data point.
-    """
-    fig, ax = plt.subplots(1, 2, figsize=(15, 6))
+        # Visualize the score vectors on the grid
+        ax[1].quiver(grid[:, 0], grid[:, 1], scores_grid[:, 0], scores_grid[:, 1],
+                     np.linalg.norm(scores_grid, axis=1), color='red', alpha=0.5)
+        
+        fig.suptitle('Gaussian Mixture Model Score Visualization')
+        fig.tight_layout()
+        plt.show()
 
-    # Plot the scores for the dataset
-    ax[0].scatter(data[:, 0], data[:, 1], s=1, alpha=0.5)
-    ax[0].quiver(data[:, 0], data[:, 1], scores_vec[:, 0], scores_vec[:, 1],
-                 np.linalg.norm(scores_vec, axis=1), color='red', alpha=0.5)
-    ax[0].set_xlabel('x')
-    ax[0].set_ylabel('y')
-    ax[0].set_title('Gaussian mixture score for dataset')
-
-    # Plot the score over a grid
-    x_grid = np.linspace(np.min(data[:, 0]), np.max(data[:, 0]), 50)
-    y_grid = np.linspace(np.min(data[:, 1]), np.max(data[:, 1]), 50)
-    xx, yy = np.meshgrid(x_grid, y_grid)
-    grid = np.hstack([xx.reshape(-1, 1), yy.reshape(-1, 1)])
-    scores_grid = np.array([gradient_log_start(point, poids, Y_star, covariances) for point in grid])
-    ax[1].scatter(data[:, 0], data[:, 1], s=1, alpha=0.5)
-    ax[1].quiver(grid[:, 0], grid[:, 1], scores_grid[:, 0], scores_grid[:, 1],
-                 np.linalg.norm(scores_grid, axis=1), color='red', alpha=0.5)
-    ax[1].set_xlabel('x')
-    ax[1].set_ylabel('y')
-    ax[1].set_title('Gaussian mixture score over grid')
-
-    fig.suptitle('Gaussian Mixture Model Score')
-    fig.tight_layout()
-    plt.show()
 
 
