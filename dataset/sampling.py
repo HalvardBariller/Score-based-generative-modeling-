@@ -14,6 +14,10 @@ from time import time
 import warnings
 warnings.filterwarnings('ignore')
 
+# from . import densities
+# from densities import multivariate_gaussian_density
+
+
 def gaussian_sampling(mu, sigma, n_samples = 1000):
     """
     Gaussian Sampling using Box-Muller Transform
@@ -89,6 +93,10 @@ def banana_shaped_sampling(N, mu, sigma, d = 2, b=0.5):
     X[:,1] -= b * (X[:,0]**2 - sigma[0,0])
 
     return X
+
+
+
+
 
 class Discrete:
     def __init__(self, center_star, size_star, m_start, scale=0.001):
@@ -172,6 +180,8 @@ class Discrete:
     
     
     def density(self, x):
+        # densities = [self.weights[i] * multivariate_gaussian_density(x, self.Y_star[i], self.covariances[i])
+        #              for i in range(len(self.weights))]
         densities = [self.weights[i] * multivariate_normal.pdf(x, mean=self.Y_star[i], cov=self.covariances[i]) 
                   for i in range(len(self.weights))]
         return np.sum(densities, axis=0)

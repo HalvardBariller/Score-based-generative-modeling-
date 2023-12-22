@@ -38,8 +38,8 @@ def annealed_langevin(ncsn, step_size, noise_levels, n_steps, n_samples, **kwarg
     data_type = kwargs['data_type']
     if data_type == 'gmm':
         x_0 = np.random.uniform(-5, 15, size=(n_samples, 2))
-    # elif data_type == 'banana':
-    #     x_0 = np.random.uniform(-5, 5, size=(n_samples, 2))
+    elif data_type == 'star':
+        x_0 = np.random.uniform(-3, 3, size=(n_samples, 2))
     samples_hist[0] = x_0
     for i in tqdm.tqdm(range(L)):
         # Annealing schedule for the step size
