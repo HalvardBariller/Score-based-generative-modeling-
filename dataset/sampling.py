@@ -7,15 +7,7 @@ import torch
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 from scipy.stats import multivariate_normal
 import matplotlib.pyplot as plt
-import scipy as scp
-import pylab as pyl
 import random
-from time import time
-import warnings
-warnings.filterwarnings('ignore')
-
-# from . import densities
-# from densities import multivariate_gaussian_density
 
 
 def gaussian_sampling(mu, sigma, n_samples = 1000):
