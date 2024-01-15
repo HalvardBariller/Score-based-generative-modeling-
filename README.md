@@ -2,7 +2,7 @@
 Project on Generative Modeling by Score Estimation. This work was conducted as part of the *Probabilistic Graphical Models and Deep Generative Models* class given by Pr. Pierre LATOUCHE and Pr. Pierre-Alexandre Mattei (MVA Master, December 2023).
 
 
-This work is based on the following paper: [Generative Modeling by Estimating Gradients of the Data Distribution](https://arxiv.org/pdf/1907.05600.pdf) by Yang Song and Stefano Ermon (2019).
+This work is mainly based on the paper [Generative Modeling by Estimating Gradients of the Data Distribution](https://arxiv.org/pdf/1907.05600.pdf) by Yang Song and Stefano Ermon (2019), and presents as well Score Matching techniques developed in [A Connection Between Score Matching and Denoising Autoencoders](https://www.iro.umontreal.ca/~vincentp/Publications/smdae_techreport.pdf) (Vincent, 2011) and [Estimation of Non-Normalized Statistical Models by Score Matching](https://jmlr.org/papers/volume6/hyvarinen05a/hyvarinen05a.pdf) (Hyvärinen, 2005).
 
 ## Introduction
 
